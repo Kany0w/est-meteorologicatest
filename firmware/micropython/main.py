@@ -174,3 +174,4 @@ while True:
         print("Erro durante o ciclo de envio:", erro)
 
     time.sleep(INTERVALO_ENVIO_SEGUNDOS)
+

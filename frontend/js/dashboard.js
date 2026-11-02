@@ -19,24 +19,32 @@ async function carregarDashboard() {
       ApiEstacao.alertas(true),
     ]);
 
-    if (ultimas.length === 0) {
+    const maisRecente = ultimas.length > 0 ? ultimas[0] : null;
+
+    if (!maisRecente) {
       statusEl.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span> API online · Aguardando conexão e envio de dados do ESP32...</span>';
     } else {
-      const maisRecente = ultimas[0];
       statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> API online · ESP32 conectado · Última leitura: ${UtilEstacao.formatarData(maisRecente.coletada_em)}</span>`;
     }
 
-    kpis.temperatura.textContent = UtilEstacao.formatarNumero(resumo.media_temperatura, 1, " °C");
-    kpis.umidade.textContent = UtilEstacao.formatarNumero(resumo.media_umidade, 1, " %");
+    // Exibe a leitura atual instantânea do sensor nos cards principais
+    kpis.temperatura.textContent = maisRecente
+      ? UtilEstacao.formatarNumero(maisRecente.temperatura, 1, " °C")
+      : UtilEstacao.formatarNumero(resumo.media_temperatura, 1, " °C");
+
+    kpis.umidade.textContent = maisRecente
+      ? UtilEstacao.formatarNumero(maisRecente.umidade, 1, " %")
+      : UtilEstacao.formatarNumero(resumo.media_umidade, 1, " %");
+
+    const pressaoExibir = maisRecente ? maisRecente.pressao : null;
+    kpis.pressao.textContent = UtilEstacao.formatarNumero(pressaoExibir, 1, " hPa");
+
+    kpis.ar.textContent = maisRecente
+      ? UtilEstacao.formatarNumero(maisRecente.qualidade_ar, 0, " ppm")
+      : UtilEstacao.formatarNumero(resumo.media_qualidade_ar, 0, " ppm");
+
     kpis.chuva.textContent = UtilEstacao.formatarNumero(resumo.acumulado_chuva_24h, 1, " mm");
     kpis.alertas.textContent = String(resumo.alertas_ativos);
-    kpis.ar.textContent = UtilEstacao.formatarNumero(resumo.media_qualidade_ar, 0, " ppm");
-
-    const pressoes = ultimas.map((item) => item.pressao);
-    const pressaoMedia = pressoes.length
-      ? pressoes.reduce((acc, valor) => acc + valor, 0) / pressoes.length
-      : null;
-    kpis.pressao.textContent = UtilEstacao.formatarNumero(pressaoMedia, 1, " hPa");
 
     const valorAtual = seletor.value;
     seletor.innerHTML = estacoes.length > 1 ? '<option value="">Todas as estações</option>' : '';
@@ -72,7 +80,7 @@ async function carregarDashboard() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="px-3 py-2 font-medium">${estacao ? estacao.nome : "ESP32 (" + leitura.estacao_id + ")"}</td>
-          <td class="px-3 py-2">${UtilEstacao.formatarNumero(leitura.temperatura, 1, " °C")}</td>
+          <td class="px-3 py-2 font-semibold text-cyan-300">${UtilEstacao.formatarNumero(leitura.temperatura, 1, " °C")}</td>
           <td class="px-3 py-2">${UtilEstacao.formatarNumero(leitura.umidade, 0, "%")}</td>
           <td class="px-3 py-2">${UtilEstacao.formatarNumero(leitura.pressao, 1)}</td>
           <td class="px-3 py-2">
