@@ -6,6 +6,9 @@ async function carregarDashboard() {
     umidade: document.getElementById("kpi-umidade"),
     pressao: document.getElementById("kpi-pressao"),
     ar: document.getElementById("kpi-ar"),
+    luz: document.getElementById("kpi-luz"),
+    mediaTemperatura: document.getElementById("kpi-media-temperatura"),
+    mediaUmidade: document.getElementById("kpi-media-umidade"),
     chuva: document.getElementById("kpi-chuva"),
     alertas: document.getElementById("kpi-alertas"),
   };
@@ -24,16 +27,15 @@ async function carregarDashboard() {
     if (!maisRecente) {
       statusEl.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span> API online · Aguardando primeira conexão do ESP32...</span>';
     } else {
-      // Calcula o tempo decorrido desde a última leitura recebida
+      // Tempo decorrido desde a última leitura recebida
       const agora = new Date().getTime();
       const dataUltimaLeitura = new Date(maisRecente.coletada_em).getTime();
       const diferencaSegundos = Math.max(0, Math.floor((agora - dataUltimaLeitura) / 1000));
 
-      // Se a última leitura foi há até 45 segundos, o ESP32 está ativamente conectado
-      if (diferencaSegundos <= 45) {
-        statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> API online · ESP32 conectado · Última leitura: ${UtilEstacao.formatarData(maisRecente.coletada_em)}</span>`;
+      // Se a última leitura foi há até 20 segundos, o ESP32 está ativamente conectado (com envio de 5s)
+      if (diferencaSegundos <= 20) {
+        statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> API online · ESP32 conectado · Última leitura: ${UtilEstacao.formatarData(maisRecente.coletada_em)} (${diferencaSegundos}s atrás)</span>`;
       } else {
-        // Se passar de 45 segundos sem enviar, detecta que foi desligado ou perdeu Wi-Fi
         let textoTempo = `${diferencaSegundos}s atrás`;
         if (diferencaSegundos >= 60) {
           const minutos = Math.floor(diferencaSegundos / 60);
@@ -43,22 +45,36 @@ async function carregarDashboard() {
       }
     }
 
-    // Exibe a leitura atual instantânea do sensor nos cards principais
+    // 1. CARDS DE MEDIÇÃO EM TEMPO REAL (Valores instantâneos do sensor)
     kpis.temperatura.textContent = maisRecente
       ? UtilEstacao.formatarNumero(maisRecente.temperatura, 1, " °C")
-      : UtilEstacao.formatarNumero(resumo.media_temperatura, 1, " °C");
+      : "--";
 
     kpis.umidade.textContent = maisRecente
       ? UtilEstacao.formatarNumero(maisRecente.umidade, 1, " %")
-      : UtilEstacao.formatarNumero(resumo.media_umidade, 1, " %");
+      : "--";
 
-    const pressaoExibir = maisRecente ? maisRecente.pressao : null;
-    kpis.pressao.textContent = UtilEstacao.formatarNumero(pressaoExibir, 1, " hPa");
+    kpis.pressao.textContent = maisRecente
+      ? UtilEstacao.formatarNumero(maisRecente.pressao, 1, " hPa")
+      : "--";
 
     kpis.ar.textContent = maisRecente
       ? UtilEstacao.formatarNumero(maisRecente.qualidade_ar, 0, " ppm")
-      : UtilEstacao.formatarNumero(resumo.media_qualidade_ar, 0, " ppm");
+      : "--";
 
+    if (kpis.luz) {
+      kpis.luz.textContent = maisRecente
+        ? UtilEstacao.formatarNumero(maisRecente.luminosidade, 0, " %")
+        : "--";
+    }
+
+    // 2. CARDS DE MÉDIAS E ACUMULADOS DE 24H
+    if (kpis.mediaTemperatura) {
+      kpis.mediaTemperatura.textContent = UtilEstacao.formatarNumero(resumo.media_temperatura, 1, " °C");
+    }
+    if (kpis.mediaUmidade) {
+      kpis.mediaUmidade.textContent = UtilEstacao.formatarNumero(resumo.media_umidade, 1, " %");
+    }
     kpis.chuva.textContent = UtilEstacao.formatarNumero(resumo.acumulado_chuva_24h, 1, " mm");
     kpis.alertas.textContent = String(resumo.alertas_ativos);
 
@@ -139,5 +155,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const seletor = document.getElementById("filtro-estacao");
   seletor.addEventListener("change", carregarDashboard);
   carregarDashboard();
-  window.setInterval(carregarDashboard, 8000);
+  // Atualiza a cada 4 segundos para resposta rápida do ESP32
+  window.setInterval(carregarDashboard, 4000);
 });

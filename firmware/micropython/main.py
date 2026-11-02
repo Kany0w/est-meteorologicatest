@@ -16,7 +16,7 @@ API_URL = "https://est-meteorologica.onrender.com/api/v1/leituras"
 API_CHAVE = "estacao-esp32-demo-key-001"
 ESTACAO_ID = 1
 
-INTERVALO_ENVIO_SEGUNDOS = 15
+INTERVALO_ENVIO_SEGUNDOS = 5
 
 # ========================================================
 # MAPEAMENTO DE PINOS (GPIO)

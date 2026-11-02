@@ -7,7 +7,7 @@
   <meta name="description" content="Dashboard público de monitoramento ambiental urbano em tempo real.">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="/static/css/estilo.css?v=2">
+  <link rel="stylesheet" href="/static/css/estilo.css?v=3">
 </head>
 <body class="app-body">
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -39,22 +39,66 @@
       </label>
     </section>
 
-    <section class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4" aria-label="Indicadores">
-      <article class="glass rounded-2xl p-4"><p class="text-slate-400 text-sm">Temperatura atual</p><p id="kpi-temperatura" class="kpi-valor">--</p></article>
-      <article class="glass rounded-2xl p-4"><p class="text-slate-400 text-sm">Umidade atual</p><p id="kpi-umidade" class="kpi-valor">--</p></article>
-      <article class="glass rounded-2xl p-4"><p class="text-slate-400 text-sm">Pressão atual</p><p id="kpi-pressao" class="kpi-valor">--</p></article>
-      <article class="glass rounded-2xl p-4"><p class="text-slate-400 text-sm">Qualidade do ar</p><p id="kpi-ar" class="kpi-valor">--</p></article>
-      <article class="glass rounded-2xl p-4"><p class="text-slate-400 text-sm">Chuva acumulada 24h</p><p id="kpi-chuva" class="kpi-valor">--</p></article>
-      <article class="glass rounded-2xl p-4"><p class="text-slate-400 text-sm">Alertas ativos</p><p id="kpi-alertas" class="kpi-valor">--</p></article>
-    </section>
+    <!-- Seção 1: Sensores em Tempo Real (Atualização rápida) -->
+    <div class="space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+        <h3 class="text-xs uppercase tracking-wider text-cyan-300 font-bold">Clima em Tempo Real (Leituras Instantâneas do ESP32)</h3>
+      </div>
+      <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" aria-label="Indicadores Tempo Real">
+        <article class="glass rounded-2xl p-4 border-l-4 border-cyan-400">
+          <p class="text-slate-400 text-xs font-medium">Temperatura atual</p>
+          <p id="kpi-temperatura" class="kpi-valor text-cyan-300">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4 border-l-4 border-emerald-400">
+          <p class="text-slate-400 text-xs font-medium">Umidade atual</p>
+          <p id="kpi-umidade" class="kpi-valor text-emerald-300">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4 border-l-4 border-amber-400">
+          <p class="text-slate-400 text-xs font-medium">Pressão atual</p>
+          <p id="kpi-pressao" class="kpi-valor text-amber-300">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4 border-l-4 border-purple-400">
+          <p class="text-slate-400 text-xs font-medium">Qualidade do ar atual</p>
+          <p id="kpi-ar" class="kpi-valor text-purple-300">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4 border-l-4 border-sky-400">
+          <p class="text-slate-400 text-xs font-medium">Luminosidade atual</p>
+          <p id="kpi-luz" class="kpi-valor text-sky-300">--</p>
+        </article>
+      </section>
+    </div>
+
+    <!-- Seção 2: Estatísticas e Médias 24h -->
+    <div class="space-y-3">
+      <h3 class="text-xs uppercase tracking-wider text-slate-400 font-bold">Médias e Acumulados (Últimas 24 Horas)</h3>
+      <section class="grid grid-cols-2 sm:grid-cols-4 gap-4" aria-label="Médias 24h">
+        <article class="glass rounded-2xl p-4">
+          <p class="text-slate-400 text-xs">Temperatura média 24h</p>
+          <p id="kpi-media-temperatura" class="kpi-valor text-slate-200">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4">
+          <p class="text-slate-400 text-xs">Umidade média 24h</p>
+          <p id="kpi-media-umidade" class="kpi-valor text-slate-200">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4">
+          <p class="text-slate-400 text-xs">Chuva acumulada 24h</p>
+          <p id="kpi-chuva" class="kpi-valor text-blue-300">--</p>
+        </article>
+        <article class="glass rounded-2xl p-4">
+          <p class="text-slate-400 text-xs">Alertas ativos</p>
+          <p id="kpi-alertas" class="kpi-valor text-amber-300">--</p>
+        </article>
+      </section>
+    </div>
 
     <section class="grid lg:grid-cols-2 gap-6">
       <article class="glass rounded-2xl p-4">
-        <h3 class="font-semibold mb-3">Clima em tempo real</h3>
+        <h3 class="font-semibold mb-3">Clima em tempo real (Gráfico)</h3>
         <div class="h-72"><canvas id="grafico-clima" aria-label="Gráfico de temperatura, umidade e pressão"></canvas></div>
       </article>
       <article class="glass rounded-2xl p-4">
-        <h3 class="font-semibold mb-3">Ar e precipitação</h3>
+        <h3 class="font-semibold mb-3">Ar e precipitação (Gráfico)</h3>
         <div class="h-72"><canvas id="grafico-ar" aria-label="Gráfico de qualidade do ar e chuva"></canvas></div>
       </article>
     </section>
@@ -81,9 +125,9 @@
     </section>
   </main>
 
-  <script src="/static/js/util.js?v=2"></script>
-  <script src="/static/js/api.js?v=2"></script>
-  <script src="/static/js/graficos.js?v=2"></script>
-  <script src="/static/js/dashboard.js?v=2"></script>
+  <script src="/static/js/util.js?v=3"></script>
+  <script src="/static/js/api.js?v=3"></script>
+  <script src="/static/js/graficos.js?v=3"></script>
+  <script src="/static/js/dashboard.js?v=3"></script>
 </body>
 </html>

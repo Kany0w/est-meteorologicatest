@@ -23,7 +23,7 @@
 #define MQTT_SENHA ""
 
 // --- Hardware e Sensores ---
-#define INTERVALO_COLETA_MS 15000UL
+#define INTERVALO_COLETA_MS 5000UL
 #define PIN_DHT 4
 #define PIN_MQ135 34
 #define PIN_LDR 35
