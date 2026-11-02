@@ -45,14 +45,25 @@ float estimarPpmMq135(int adc) {
 }
 
 void conectarWifi() {
+  Serial.print("Conectando ao Wi-Fi: ");
+  Serial.println(WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_SENHA);
   unsigned long inicio = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - inicio < 20000UL) {
     digitalWrite(PIN_LED_STATUS, !digitalRead(PIN_LED_STATUS));
     delay(400);
+    Serial.print(".");
   }
-  digitalWrite(PIN_LED_STATUS, WiFi.status() == WL_CONNECTED ? HIGH : LOW);
+  Serial.println();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("Wi-Fi Conectado com sucesso! IP: ");
+    Serial.println(WiFi.localIP());
+    digitalWrite(PIN_LED_STATUS, HIGH);
+  } else {
+    Serial.println("Falha ao conectar no Wi-Fi.");
+    digitalWrite(PIN_LED_STATUS, LOW);
+  }
 }
 
 void reconectarMqtt() {
@@ -89,6 +100,7 @@ bool enviarHttp(const String& json) {
   if (WiFi.status() != WL_CONNECTED) {
     conectarWifi();
     if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("[HTTP] Sem conexao Wi-Fi para envio.");
       return false;
     }
   }
@@ -102,7 +114,7 @@ bool enviarHttp(const String& json) {
       url = "https://" + String(API_HOST) + ":" + String(API_PORTA) + String(API_CAMINHO);
     }
     WiFiClientSecure secureClient;
-    secureClient.setInsecure(); // Permite conexões HTTPS na nuvem sem necessidade de gerenciar certificados SSL locais
+    secureClient.setInsecure(); // Permite conexões HTTPS sem necessidade de gerenciar certificados SSL locais
     http.begin(secureClient, url);
   } else {
     if (API_PORTA == 80) {
@@ -113,9 +125,24 @@ bool enviarHttp(const String& json) {
     http.begin(wifiCliente, url);
   }
 
+  Serial.print("[HTTP] Enviando para: ");
+  Serial.println(url);
+
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-API-Key", API_CHAVE);
   int codigo = http.POST(json);
+  
+  Serial.print("[HTTP] Codigo de resposta: ");
+  Serial.println(codigo);
+  if (codigo > 0) {
+    String resposta = http.getString();
+    Serial.print("[HTTP] Resposta da API: ");
+    Serial.println(resposta);
+  } else {
+    Serial.print("[HTTP] Erro na conexao: ");
+    Serial.println(http.errorToString(codigo).c_str());
+  }
+
   http.end();
   return codigo >= 200 && codigo < 300;
 }
@@ -137,6 +164,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(PIN_PLUVIOMETRO), contarPulsoChuva, FALLING);
 
   Serial.begin(115200);
+  delay(1000);
+  Serial.println("\n=== Estacao Meteorologica ESP32 Iniciando ===");
+
   dht.begin();
   Wire.begin();
   bmpDisponivel = bmp.begin(0x76);
@@ -144,6 +174,7 @@ void setup() {
     bmpDisponivel = bmp.begin(0x77);
   }
   if (bmpDisponivel) {
+    Serial.println("Sensor BMP280 detectado com sucesso!");
     bmp.setSampling(
       Adafruit_BMP280::MODE_NORMAL,
       Adafruit_BMP280::SAMPLING_X2,
@@ -151,6 +182,8 @@ void setup() {
       Adafruit_BMP280::FILTER_X16,
       Adafruit_BMP280::STANDBY_MS_500
     );
+  } else {
+    Serial.println("Aviso: BMP280 nao encontrado. Usando pressao padrao 1013.25 hPa.");
   }
 
   conectarWifi();
@@ -173,7 +206,7 @@ void loop() {
 
   float temperatura = dht.readTemperature();
   float umidade = dht.readHumidity();
-  float pressao = bmpDisponivel ? bmp.readPressure() / 100.0f : NAN;
+  float pressao = bmpDisponivel ? bmp.readPressure() / 100.0f : 1013.25f;
   int adcAr = analogRead(PIN_MQ135);
   int adcLuz = analogRead(PIN_LDR);
   float qualidadeAr = estimarPpmMq135(adcAr);
@@ -186,14 +219,12 @@ void loop() {
   float pluviometria = pulsos * FATOR_MM_POR_PULSO;
 
   if (isnan(temperatura) || isnan(umidade)) {
-    Serial.println("Falha na leitura do DHT22.");
+    Serial.println("Falha na leitura do DHT22. Verifique as conexoes.");
     digitalWrite(PIN_LED_STATUS, LOW);
     return;
   }
   if (isnan(pressao)) {
-    Serial.println("Falha na leitura do BMP280.");
-    digitalWrite(PIN_LED_STATUS, LOW);
-    return;
+    pressao = 1013.25f;
   }
 
   bool valida = valorDentroFaixa(temperatura, TEMP_MIN, TEMP_MAX) &&
@@ -204,6 +235,7 @@ void loop() {
                 valorDentroFaixa(pluviometria, CHUVA_MIN, CHUVA_MAX);
 
   String json = montarJson(temperatura, umidade, pressao, qualidadeAr, luminosidade, pluviometria, valida);
+  Serial.print("Payload preparado: ");
   Serial.println(json);
 
   bool httpOk = enviarHttp(json);
