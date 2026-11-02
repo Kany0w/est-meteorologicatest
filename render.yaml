@@ -12,3 +12,4 @@ services:
         value: production
       - key: SEED_ON_STARTUP
         value: "true"
+

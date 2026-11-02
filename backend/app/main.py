@@ -18,13 +18,16 @@ settings = get_settings()
 
 @asynccontextmanager
 async def ciclo_de_vida(_app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    if settings.seed_on_startup:
-        db = SessionLocal()
-        try:
-            popular_banco(db)
-        finally:
-            db.close()
+    try:
+        Base.metadata.create_all(bind=engine)
+        if settings.seed_on_startup:
+            db = SessionLocal()
+            try:
+                popular_banco(db)
+            finally:
+                db.close()
+    except Exception as erro:
+        print(f"[BANCO] Falha ao conectar/inicializar banco de dados: {erro}")
     iniciar_cliente_mqtt()
     yield
 
