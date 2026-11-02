@@ -22,9 +22,25 @@ async function carregarDashboard() {
     const maisRecente = ultimas.length > 0 ? ultimas[0] : null;
 
     if (!maisRecente) {
-      statusEl.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span> API online · Aguardando conexão e envio de dados do ESP32...</span>';
+      statusEl.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span> API online · Aguardando primeira conexão do ESP32...</span>';
     } else {
-      statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> API online · ESP32 conectado · Última leitura: ${UtilEstacao.formatarData(maisRecente.coletada_em)}</span>`;
+      // Calcula o tempo decorrido desde a última leitura recebida
+      const agora = new Date().getTime();
+      const dataUltimaLeitura = new Date(maisRecente.coletada_em).getTime();
+      const diferencaSegundos = Math.max(0, Math.floor((agora - dataUltimaLeitura) / 1000));
+
+      // Se a última leitura foi há até 45 segundos, o ESP32 está ativamente conectado
+      if (diferencaSegundos <= 45) {
+        statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span> API online · ESP32 conectado · Última leitura: ${UtilEstacao.formatarData(maisRecente.coletada_em)}</span>`;
+      } else {
+        // Se passar de 45 segundos sem enviar, detecta que foi desligado ou perdeu Wi-Fi
+        let textoTempo = `${diferencaSegundos}s atrás`;
+        if (diferencaSegundos >= 60) {
+          const minutos = Math.floor(diferencaSegundos / 60);
+          textoTempo = minutos === 1 ? '1 min atrás' : `${minutos} min atrás`;
+        }
+        statusEl.innerHTML = `<span class="inline-flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span> API online · ESP32 desconectado (última leitura ${textoTempo}) · Aguardando reconexão...</span>`;
+      }
     }
 
     // Exibe a leitura atual instantânea do sensor nos cards principais
